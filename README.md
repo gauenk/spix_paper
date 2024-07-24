@@ -69,9 +69,9 @@ The following images demonstrate the performance of Superpixel Neighborhood Atte
 
 <img src="assets/logo_results.png" width="700" alt="deno">
 
-## Superpixel Attention Map
+## Soft Superpixel Attention Robustly Rejects Dissimilar Regions
 
-The following images compare the attention maps of SNA with alternatives.
+This image shows Soft Superpixel Neighborhood Attention (Soft-SNA) can robustly reject dissimilar regions, while Neighborhood Attention (NA) and Hard-SNA struggle.
 
 ![compare](assets/logo_attn.png?)
 
