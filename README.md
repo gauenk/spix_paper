@@ -70,7 +70,7 @@ save_image(denoised_image, 'path/to/save/denoised_image')
 
 The following images demonstrate the performance of Superpixel Neighborhood Attention compared to Neighborhood Attention and Hard Superpixel Neighborhood Attention.
 
-![compare](assets/comparison.png)
+![compare](assets/logo_results.png)
 
 
 ## Citation
