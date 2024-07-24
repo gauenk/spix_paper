@@ -69,11 +69,18 @@ save_image(denoised_image, 'path/to/save/denoised_image')
 ```
 
 
-## Results
+## Denoising Results
+
 
 The following images demonstrate the performance of Superpixel Neighborhood Attention compared to Neighborhood Attention and Hard Superpixel Neighborhood Attention.
 
-![compare](assets/logo_results.png?)
+![compare](assets/deno_examples.png?)
+
+## Superpixel Attention Map
+
+The following images compare the attention maps of SNA with alternatives.
+
+![compare](assets/logo_attn.png?)
 
 
 ## Citation
