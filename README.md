@@ -13,13 +13,6 @@ This paper proposes **Soft Superpixel Neighborhood Attention (SNA)**, which uses
 
 SNA outperforms alternative local attention modules on image denoising, and we compare the superpixels learned from denoising with those learned with superpixel supervision.
 
-## Features
-
-- **Soft Superpixel Neighborhood Attention (SNA)**: Interpolates between existing neighborhood attention and naive superpixel neighborhood attention.
-- **Theoretical Results**: Demonstrates that SNA is the optimal denoiser under a latent superpixel model.
-- **Performance**: Outperforms alternative local attention modules on image denoising tasks.
-- **Comparative Analysis**: Compares superpixels learned from denoising with those learned with superpixel supervision.
-
 ## Installation
 
 To install and use the Superpixel Neighborhood Attention module, follow these steps:
