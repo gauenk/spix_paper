@@ -2,6 +2,9 @@
 
 Superpixel Neighborhood Attention (SNA) is a novel approach to image denoising that addresses the limitations of traditional attention operators, which operate on square windows and can mix features from perceptually unrelated regions. This can degrade the quality of the denoising process. SNA uses superpixel probabilities to interpolate between existing neighborhood attention and naive superpixel neighborhood attention, leading to improved denoising performance.
 
+![sna](assets/superpixel_attn.png?)
+
+
 ## Overview
 
 Images often contain objects with deformable boundaries, such as the contours of a human face. Traditional attention operators act on square windows, which can mix features from unrelated regions and degrade the quality of a denoiser. While one can exclude pixels using an estimate of perceptual groupings like superpixels, naive use of superpixels can be theoretically and empirically worse than standard attention.
