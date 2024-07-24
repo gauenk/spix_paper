@@ -12,6 +12,7 @@ cmake/*
 data/*
 output/*
 weights/*
+*egg-info/
 lib/*egg-info/
 .cache_io/*
 *.py[co]
