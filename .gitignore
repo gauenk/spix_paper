@@ -1,0 +1,59 @@
+*txt
+./slurm*
+./reqs/*~
+.*
+dispatch/*
+.tmp
+.cache_io
+output
+wandb/*
+build/*
+cmake/*
+data/*
+output/*
+weights/*
+lib/*egg-info/
+.cache_io/*
+*.py[co]
+*__pycache__/
+*~
+\#*
+\.\#*
+lib/hids.egg-info/
+lib/build
+
+*.swp
+*.swo
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
