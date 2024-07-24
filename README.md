@@ -83,8 +83,8 @@ If you find this work useful, please cite our paper:
 ```bibtex
 @inproceedings{gauen2024sna,
   title={Soft Superpixel Neighborhood Attention},
-  author={Kent Gauen, Stanley Chan},
-  booktitle={arvix},
+  author={Gauen, Kent and Chan, Stanley},
+  journal={arXiv},
   year={2024}
 }
 
