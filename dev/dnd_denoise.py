@@ -91,6 +91,15 @@ flags.DEFINE_string(
     'Location at which to save output denoised images.')
 
 
+def info_at_index(info,image_index):
+  bb = info['boundingboxes']
+  bayer_pattern = np.asarray(info[info['camera'][0][image_index]]['pattern']).tolist()
+  boxes = np.array(info[bb[0][image_index]]).T
+  nlf_h5 = info[info['nlf'][0][image_index]]
+  shot_noise = nlf_h5['a'][0][0]
+  read_noise = nlf_h5['b'][0][0]
+  return bayer_pattern,boxes,shot_noise,read_noise
+
 def denoise_raw(denoiser, data_dir, output_dir):
   """Denoises all bounding boxes in all raw images from the DND dataset.
 
@@ -107,58 +116,26 @@ def denoise_raw(denoiser, data_dir, output_dir):
   """
   # Loads image information and bounding boxes.
   info = h5py.File(os.path.join(data_dir, 'info.mat'), 'r')['info']
-  bb = info['boundingboxes']
 
   # Denoise each image.
   for i in range(50):
+
+    # Load image index information
+    bayer_pattern,boxes,shot_noise,read_noise = info_at_index(info,i)
+
     # Loads the noisy image.
     filename = os.path.join(data_dir, 'images_raw', '%04d.mat' % (i + 1))
+    noisy = np.float32(np.array(h5py.File(filename, 'r')['Inoisy']).T)
+
+    # Loads the srgb
+    filename = os.path.join(data_dir, 'images_srgb', '%04d.mat' % (i + 1))
     img = h5py.File(filename, 'r')
     print(list(img.keys()))
-    noisy = np.float32(np.array(img['Inoisy']).T)
-
-    # Loads raw Bayer color pattern.
-    bayer_pattern = np.asarray(info[info['camera'][0][i]]['pattern']).tolist()
-
-    # Denoises each bounding box in this image.
-    boxes = np.array(info[bb[0][i]]).T
+    exit()
+    clean = np.float32(np.array(h5py.File(filename, 'r')['Inoisy']).T)
 
     for k in range(20):
-      # # Crops the image to this bounding box.
-      # idx = [
-      #     int(boxes[k, 0] - 1),
-      #     int(boxes[k, 2]),
-      #     int(boxes[k, 1] - 1),
-      #     int(boxes[k, 3])
-      # ]
-      # noisy_crop = noisy[idx[0]:idx[1], idx[2]:idx[3]].copy()
-
-      # # Flips the raw image to ensure RGGB Bayer color pattern.
-      # if (bayer_pattern == [[1, 2], [2, 3]]):
-      #   pass
-      # elif (bayer_pattern == [[2, 1], [3, 2]]):
-      #   noisy_crop = np.fliplr(noisy_crop)
-      # elif (bayer_pattern == [[2, 3], [1, 2]]):
-      #   noisy_crop = np.flipud(noisy_crop)
-      # else:
-      #   print('Warning: assuming unknown Bayer pattern is RGGB.')
-
-      # # Loads shot and read noise factors.
-      # nlf_h5 = info[info['nlf'][0][i]]
-      # shot_noise = nlf_h5['a'][0][0]
-      # read_noise = nlf_h5['b'][0][0]
-
-      # # Extracts each Bayer image plane.
-      # denoised_crop = noisy_crop.copy()
-      # height, width = noisy_crop.shape
-      # channels = []
-      # for yy in range(2):
-      #   for xx in range(2):
-      #     noisy_crop_c = noisy_crop[yy:height:2, xx:width:2].copy()
-      #     channels.append(noisy_crop_c)
-      # channels = np.stack(channels, axis=-1)
-
-      channels = read_dnd(noisy,bayer_pattern,info,boxes,k,i)
+      channels = read_dnd(noisy,bayer_pattern,boxes,shot_noise,read_noise,k)
 
       print(channels.shape)
       import torchvision.utils as tv_utils
@@ -168,7 +145,9 @@ def denoise_raw(denoiser, data_dir, output_dir):
       root = Path("./output")
       chnls = rearrange(th.from_numpy(channels),'h w f -> 1 f h w')
       print(chnls.min(),chnls.max())
-      tv_utils.save_image(chnls[:,:3],root / "chnls.png")
+      fn = root / "chnls.png"
+      print(fn)
+      tv_utils.save_image(chnls[:,:3],fn)
       exit()
 
       # Denoises this crop of the image.
@@ -193,7 +172,7 @@ def denoise_raw(denoiser, data_dir, output_dir):
       # sio.savemat(save_file, {'denoised_crop': denoised_crop})
       save_dnd(denoised_crop,output,height,width)
 
-def read_dnd(noisy,bayer_pattern,info,boxes,k,i):
+def read_dnd(noisy,bayer_pattern,boxes,shot_noise,read_noise,k):
     # Crops the image to this bounding box.
     idx = [
         int(boxes[k, 0] - 1),
@@ -213,10 +192,6 @@ def read_dnd(noisy,bayer_pattern,info,boxes,k,i):
     else:
       print('Warning: assuming unknown Bayer pattern is RGGB.')
 
-    # Loads shot and read noise factors.
-    nlf_h5 = info[info['nlf'][0][i]]
-    shot_noise = nlf_h5['a'][0][0]
-    read_noise = nlf_h5['b'][0][0]
 
     # Extracts each Bayer image plane.
     denoised_crop = noisy_crop.copy()

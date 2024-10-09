@@ -43,6 +43,7 @@ class AttnReweight(nn.Module):
         c = th.max(attn,dim=-1,keepdim=True).values
         attn = th.exp(attn-c)
         attn = AttnReweightFunction.apply(attn,sims,sinds)
+        # attn = th.zeros((B,HD,NSP,H,W,K),device=device,dtype=dtype)
 
         # -- adjust for variable nz in patch --
         if normz_patch:
@@ -51,7 +52,7 @@ class AttnReweight(nn.Module):
             gamma_s = 1./(gamma_s.sum(2,keepdim=True)+eps)
             attn = attn * gamma_s
 
-        # -- reweight with p(s_i = s) --
+        # -- reweight with p(s_i = s) which is the same for each "j \in N(i)" --
         gather_sims = GatherSims()
         pi = gather_sims(sims,sinds)
         pi = rearrange(pi,'b h w ni -> b 1 ni h w 1')

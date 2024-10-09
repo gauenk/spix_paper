@@ -52,6 +52,42 @@ def get_checkpoint(root):
     chkpt = torch.load(chkpt_files[-1])
     return chkpt,chkpt_files[-1]
 
+def load_old_model(fn,model):
+
+    # -- init load --
+    old_state = torch.load(fn)['model_state_dict']
+    N=len("module.")
+    old_state = {k[N:]:v for k,v in old_state.items()}
+
+    # -- pairs --
+    pairs = {"first_conv.weight":"lin0.weight",
+             "first_conv.bias":"lin0.bias",
+             "last_conv.weight":"lin1.weight",
+             "last_conv.bias":"lin1.bias",
+             "blocks.0.nat_layer.1.qk.weight":"attn.nat_attn.qk.weight",
+             "blocks.0.nat_layer.1.v.weight":"attn.nat_agg.v.weight",
+             "blocks.0.nat_layer.1.proj.weight":"attn.nat_agg.proj.weight",
+             "blocks.0.nat_layer.1.proj.bias":"attn.nat_agg.proj.bias"}
+
+    # -- copy weights --
+    state = {}
+    for old,new in pairs.items():
+        state[new] = old_state[old]
+        if old.startswith("first_conv"):
+            state[new] = state[new].squeeze()
+        if old.startswith("last_conv"):
+            state[new] = state[new].squeeze()
+
+    # -- copy attn scale net --
+    # "blocks.0.nat_layer.1.attn_scale_net":"attn.nat_attn.attn_scale_net"
+    for key in old_state:
+        if key.startswith("blocks.0.nat_layer.1.attn_scale_net"):
+            new_key = key.replace("blocks.0.nat_layer.1.attn_scale_net","attn.nat_attn.attn_scale_net")
+            state[new_key] = old_state[key]
+
+    # print(list(state.keys()))
+    model.load_state_dict(state)
+
 def load_checkpoint(chkpt,model,optimizer=None,weights_only=False,skip_module=True):
     start_epoch = 0
     if not(chkpt is None):

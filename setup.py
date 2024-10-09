@@ -1,4 +1,10 @@
 
+import os
+
+# Set environment variables to use ccache
+os.environ['PYTORCH_NVCC'] = "ccache nvcc"
+os.environ['TORCH_EXTENSION_SKIP_NVCC_GEN_DEPENDENCIES'] = '1'
+
 from setuptools import setup, find_packages
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension
 
@@ -19,7 +25,7 @@ setup(
             'spix_paper/csrc/sna/gather_sims.cu',
             # -- pybind --
             "spix_paper/csrc/pybind.cpp",
-        ],extra_compile_args={'cxx': ['-g','-w'],'nvcc': ['-O1','-w']}),
+        ],extra_compile_args={'cxx': ['-g','-w'],'nvcc': ['-O3','-w']}),
     ],
     cmdclass={'build_ext': BuildExtension},
 )

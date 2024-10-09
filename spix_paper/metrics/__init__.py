@@ -8,6 +8,9 @@ from dev_basics.utils.metrics import compute_psnrs,compute_ssims
 
 
 def compute_asa(sp,gt):
+    # -- edge case --
+    if th.numel(gt) == 0:
+        return -1
 
     # -- prepare --
     if not th.is_tensor(sp):
@@ -75,6 +78,9 @@ def get_brbp_edges(sp,gt,r=1):
     return edges_sp,edges_gt,Nsp_edges
 
 def compute_bp(sp,gt,r=1):
+    # -- edge case --
+    if th.numel(gt) == 0:
+        return -1
 
     # -- get edges --
     edges_sp,edges_gt,Nsp_edges = get_brbp_edges(sp,gt,r)
@@ -84,6 +90,9 @@ def compute_bp(sp,gt,r=1):
     return br.item()
 
 def compute_br(sp,gt,r=1):
+    # -- edge case --
+    if th.numel(gt) == 0:
+        return -1
 
     # -- get edges --
     edges_sp,edges_gt,_ = get_brbp_edges(sp,gt,r)

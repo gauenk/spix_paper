@@ -21,12 +21,13 @@ class LossInterface(nn.Module):
             raise ValueError(f"Uknown target [{self.spix_loss_target}]")
 
     def forward(self, img, seg, deno=None, sims=None):
+        eps = 1e-6
         if self.lname == "spix":
             return self.spix_loss(img,seg,sims)
         elif self.lname == "deno":
-            return th.sqrt(th.mean((img-deno)**2)+1e-6) # deno loss
+            return th.sqrt(th.mean((img-deno)**2)+eps) # deno loss
         elif self.lname == "deno+spix":
-            loss0 = th.sqrt(th.mean((img-deno)**2)+1e-6) # deno loss
+            loss0 = th.sqrt(th.mean((img-deno)**2)+eps) # deno loss
             loss1 = self.spix_loss(img,seg,sims)
             loss = self.mix_alpha * loss0 + (1-self.mix_alpha) * loss1
             return loss

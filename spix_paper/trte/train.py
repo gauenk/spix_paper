@@ -32,29 +32,31 @@ from spix_paper.models import load_model
 import spix_paper.trte_utils as utils
 import spix_paper.utils as base_utils
 from spix_paper import metrics
+from spix_paper import isp
 
+
+# -- fill missing with defaults --
+tr_defs = {"dim":12,"qk_dim":6,"mlp_dim":6,"stoken_size":[8],"block_num":1,
+        "heads":1,"M":0.,"use_local":False,"use_inter":False,
+        "use_intra":True,"use_ffn":False,"use_nat":False,"nat_ksize":9,
+        "affinity_softmax":1.,"topk":100,"intra_version":"v1",
+        "data_path":"./data/","data_augment":False,
+        "patch_size":128,"data_repeat":1,
+        "gpu_ids":"[1]","num_workers":4,
+        "model":"model","model_name":"simple",
+        "decays":[],"gamma":0.5,"lr":0.0002,"resume":None,
+        "log_name":"default_log","exp_name":"default_exp",
+        "epochs":50,"log_every":100,"test_every":1,"batch_size":8,"colors":3,
+        "base_path":"output/default_basepath/train/",
+        "resume_uuid":None,"resume_flag":True,
+        "spatial_chunk_size":256,"spatial_chunk_overlap":0.25,
+        "gradient_clip":0.,"spix_loss_target":"seg",
+        "resume_weights_only":False,
+        "save_every_n_epochs":5,"noise_type":"gaussian"}
 
 def run(cfg):
 
-    # -- fill missing with defaults --
-    defs = {"dim":12,"qk_dim":6,"mlp_dim":6,"stoken_size":[8],"block_num":1,
-            "heads":1,"M":0.,"use_local":False,"use_inter":False,
-            "use_intra":True,"use_ffn":False,"use_nat":False,"nat_ksize":9,
-            "affinity_softmax":1.,"topk":100,"intra_version":"v1",
-            "data_path":"./data/","data_augment":False,
-            "patch_size":128,"data_repeat":1,
-            "gpu_ids":"[1]","num_workers":4,
-            "model":"model","model_name":"simple",
-            "decays":[],"gamma":0.5,"lr":0.0002,"resume":None,
-            "log_name":"default_log","exp_name":"default_exp",
-            "epochs":50,"log_every":100,"test_every":1,"batch_size":8,"colors":3,
-            "base_path":"output/default_basepath/train/",
-            "resume_uuid":None,"resume_flag":True,
-            "spatial_chunk_size":256,"spatial_chunk_overlap":0.25,
-            "gradient_clip":0.,"spix_loss_target":"seg",
-            "resume_weights_only":False,
-            "save_every_n_epochs":5}
-    cfg = base_utils.extract_defaults(cfg,defs)
+    cfg = base_utils.extract_defaults(cfg,tr_defs)
     if cfg.mname == "empty": return None
 
     # -- select active gpu devices --
@@ -70,11 +72,28 @@ def run(cfg):
 
     # -- noise function --
     sigma = base_utils.optional(cfg,'sigma',0.)
-    add_noise = lambda x: x + (sigma/255.)*th.randn_like(x)
+    ntype = base_utils.optional(cfg,'noise_type',"gaussian")
+    def pre_process(x):
+        if ntype == "gaussian":
+            return x + (sigma/255.)*th.randn_like(x),{}
+        elif ntype == "isp":
+            return isp.run_unprocess(x)
+        else:
+            raise ValueError(f"Uknown noise type [{ntype}]")
+    def post_process(deno,noise_info):
+        if ntype == "gaussian":
+            return deno
+        elif ntype == "isp":
+            keys = ['red_gain','blue_gain','cam2rgb']
+            args = [noise_info[k] for k in keys]
+            return isp.run_process(deno,*args)
+        else:
+            raise ValueError(f"Uknown noise type [{ntype}]")
 
     # -- info & parallel --
     num_parameters = sum(map(lambda x: x.numel(), model.parameters()))
     print('#Params : {:<.4f} [K]'.format(num_parameters / 10 ** 3))
+    # exit()
     model = nn.DataParallel(model).to(device)
 
     # -- optim and sched --
@@ -131,20 +150,23 @@ def run(cfg):
             img, seg = img.to(device)/255., seg[:,None].to(device)
 
             # -- optional noise --
-            noisy = add_noise(img)
+            noisy,ninfo = pre_process(img)
 
             # -- forward --
             timer.sync_start("fwd")
-            output = model(noisy)
+            output = model(noisy,ninfo)
             timer.sync_stop("fwd")
 
             # -- unpack --
             deno = base_utils.optional(output,'deno',None)
             sims = base_utils.optional(output,'sims',None)
 
+            # -- optionally post-process --
+            deno = post_process(deno,ninfo)
+
             # -- loss --
             timer.sync_start("loss")
-            loss = loss_fxn(img,seg,deno=deno,sims=sims)
+            loss = loss_fxn(255*img,seg,deno=255*deno,sims=sims)
             timer.sync_stop("loss")
 
             timer.sync_start("bwd")
@@ -193,7 +215,6 @@ def run(cfg):
 
         # -- epoch loop --
         if epoch % cfg.save_every_n_epochs == 0:
-
 
             # -- save --
             model_str = '%s-epoch=%02d.ckpt'%(cfg.uuid,epoch-1) # "start at 0"

@@ -236,6 +236,7 @@ def get_viz_grid(models,attn,clean,noisy,sims,spix,ksize,hs,ws,num,root):
     out1 = out1[...,hstart:hend,wstart:wend]
     out2 = out2[...,hstart:hend,wstart:wend]
     clean_crop = clean[...,hstart:hend,wstart:wend].cpu()
+    noisy_crop = noisy[...,hstart:hend,wstart:wend].cpu()
     viz1,viz2 = viz0.clone(),viz0.clone()
     nrmz = viz0.clone()
     for (hi,wi) in grid:
@@ -267,6 +268,7 @@ def get_viz_grid(models,attn,clean,noisy,sims,spix,ksize,hs,ws,num,root):
         out1[:,i][th.where(nrmz==0)] = 0.
         out2[:,i][th.where(nrmz==0)] = 0.
         clean_crop[:,i][th.where(nrmz==0)] = 0.
+        noisy_crop[:,i][th.where(nrmz==0)] = 0.
 
     # -- view psnrs --
     delta0 = th.mean((out0-clean_crop)**2,1)[th.where(nrmz>0)]
@@ -312,6 +314,9 @@ def get_viz_grid(models,attn,clean,noisy,sims,spix,ksize,hs,ws,num,root):
     # -- clean cropped region --
     clean_crop = th.cat([clean_crop,alpha],1)
     clean_crop = interp(clean_crop,256,256)
+    noisy_crop = th.cat([noisy_crop,alpha],1)
+    noisy_crop = interp(noisy_crop,256,256)
+
     # clean_crop = th.cat([clean_crop,th.ones_like(clean_crop[:,:1])],1)
 
     # -- interpolation --
@@ -352,8 +357,17 @@ def get_viz_grid(models,attn,clean,noisy,sims,spix,ksize,hs,ws,num,root):
     # print(viz0.shape,viz1.shape,out0.shape,out1.shape,zero.shape)
     # print(clean_crop.shape,out0.shape)
     zero = th.zeros_like(viz0)
-    grid = th.stack([clean,viz0,viz1,viz2,
+
+    # -- grid version 0 --
+    # grid = th.stack([clean,viz0,viz1,viz2,
+    #                  clean_crop,out0,out1,out2])
+
+    # -- grid version 1 --
+    grid = th.stack([noisy_crop,viz0,viz1,viz2,
                      clean_crop,out0,out1,out2])
+
+
+
     # print(grid.shape)
     grid = grid[:,0]
     # print(grid.shape)
@@ -398,6 +412,7 @@ def main():
     dilation = 1
     normz = True
     dist_type = "l2"
+    # dist_type = "prod"
 
     # -- optimal "qk_val" --
     _sigma = sigma/255.

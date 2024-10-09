@@ -1,6 +1,6 @@
 """
 
-   Simple Denoising Network
+   Linear Denoising Network
 
 """
 
@@ -21,27 +21,27 @@ from ..utils import extract
 from .sp_net import SuperpixelNetwork
 from ..attn import SuperpixelAttention
 
-class SimpleDenoiser(nn.Module):
+class LinearDenoiser(nn.Module):
 
     defs = dict(SuperpixelNetwork.defs)
     defs.update(SuperpixelAttention.defs)
-    defs.update({"lname":"deno","net_depth":1,"simple_linear_bias":False,"output_dict":True})
+    defs.update({"lname":"deno","net_depth":1})
 
     def __init__(self, in_dim, dim, **kwargs):
         super().__init__()
 
-        # -- init --
-        self.output_dict = kwargs['output_dict']
+        # -- unpack --
+        self.net_depth = kwargs['net_depth']
+        D = self.net_depth
 
-        # -- linear --
-        bias = kwargs['simple_linear_bias']
-        self.lin0 = nn.Linear(in_dim,dim,bias=bias)
-        self.lin1 = nn.Linear(dim,in_dim,bias=bias)
-
+        # -- io layers --
+        self.lin0 = nn.Linear(in_dim,dim,bias=True)
+        self.lin1 = nn.Linear(dim,in_dim,bias=True)
 
         # -- learn attn scale --
-        attn_kwargs = extract(kwargs,SuperpixelNetwork.defs)
-        self.attn = SuperpixelAttention(dim,**attn_kwargs)
+        akwargs = extract(kwargs,SuperpixelNetwork.defs)
+        self.mid = nn.ModuleList([nn.Linear(dim,dim,bias=False) for _ in range(D-1)])
+        self.attn = nn.ModuleList([SuperpixelAttention(dim,**akwargs) for _ in range(D)])
 
         # -- superpixel network --
         self.use_sp_net = not(kwargs['attn_type'] == "na" and kwargs['lname'] == "deno")
@@ -61,14 +61,19 @@ class SimpleDenoiser(nn.Module):
         shape1 = lambda x: rearrange(x,'b (h w) c -> b c h w',h=H,w=W)
         apply_lin = lambda x,lin: shape1(lin(shape0(x)))
 
-        # -- forward --
+        # -- first features --
         ftrs = apply_lin(x,self.lin0)
         if self.use_sp_net: sims = self.spix_net(ftrs)[0]
         else: sims = None
-        ftrs = ftrs+self.attn(ftrs,sims)
+
+        # -- depth --
+        ftrs = ftrs+self.attn[0](ftrs,sims)
+        for d in range(self.net_depth-1):
+            ftrs = apply_lin(ftrs,self.mid[d])
+            ftrs = ftrs+self.attn[d+1](ftrs,sims)
+
+        # -- output --
         deno = x + apply_lin(ftrs,self.lin1)
 
-        if self.output_dict:
-            return {"deno":deno,"sims":sims}
-        else:
-            return deno # remove me
+        return {"deno":deno,"sims":sims}
+

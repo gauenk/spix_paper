@@ -30,9 +30,12 @@ def main():
     # -- get experiments --
     def clear_fxn(num,cfg): return False
     exp_fn_list = [
-        # "exps/trte_deno/train.cfg",
+        "exps/trte_deno/train.cfg",
+        # "exps/trte_deno/train_conv.cfg",
+        # "exps/trte_deno/train_lin.cfg",
+        # "exps/trte_deno/train_conv_only.cfg",
         # "exps/trte_deno/train_empty.cfg",
-        "exps/trte_deno/train_spix.cfg",
+        # "exps/trte_deno/train_spix.cfg",
     ]
     exps,uuids = [],[]
     cache_fn = ".cache_io_exps/trte_deno/train/"

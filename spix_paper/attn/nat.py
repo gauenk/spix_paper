@@ -54,7 +54,7 @@ def run_stnls_agg(v,attn,flows):
     # weights = th.nn.functional.softmax(10*dists,-1)
     ps,stride0 = 1,1
     agg = NonLocalGather(ps,stride0)
-    attn = attn[:,:,None]
+    attn = attn[:,:,None] # b hd t h w kernel
     flows = flows[:,:,None]
     v = rearrange(v,'b hd h w f -> b hd 1 f h w').contiguous()
     v = th.sum(agg(v,attn,flows),2) # b hd k t f h w
@@ -118,6 +118,8 @@ class NeighborhoodAttention2D(nn.Module):
         self.proj = nn.Linear(dim, dim) if proj_layer else nn.Identity()
         self.proj_drop = nn.Dropout(proj_drop)
 
+        # print(self.learn_attn_scale)
+        # exit()
         self.learn_attn_scale = learn_attn_scale
         if not self.learn_attn_scale:
             self.attn_scale_net = nn.Identity()
@@ -143,21 +145,25 @@ class NeighborhoodAttention2D(nn.Module):
         # print("k.shape: ",k.shape)
 
         # -- rescaling --
+        scale = self.scale
         if self.learn_attn_scale:
             scale = self.attn_scale_net(rearrange(x,'b h w c -> b c h w'))
             scale = rearrange(scale,'b 1 h w -> b 1 h w 1')
+            # print(scale)
+            # print(scale.shape)
+            # exit()
             # if self.detach_learn_attn:
             #     scale = scale.detach()
             q = scale * q
         else:
             if self.dist_type == "prod":
-                q = self.scale * q
+                q = scale * q
 
         # -- attention --
         # attn = na2d_qk_with_bias(q, k, self.rpb, self.kernel_size, self.dilation)
         attn = run_search_fxn(q, k, self.kernel_size, self.dilation, self.dist_type)
         if not self.learn_attn_scale and self.dist_type == "l2":
-            attn = self.scale * attn
+            attn = scale * attn
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
         x = na2d_av(attn, v, self.kernel_size, self.dilation)
@@ -255,18 +261,41 @@ class NeighAttnMat(nn.Module):
         # print("differences: ",diff0,diff1)
 
         # -- rescaling --
+        # print(self.scale)
+        # exit()
+        # scale = self.scale
+        # if self.learn_attn_scale:
+        #     scale = self.attn_scale_net(rearrange(x,'b h w c -> b c h w'))
+        #     scale = rearrange(scale,'b 1 h w -> b 1 h w 1')
+        # if self.dist_type == "prod": q = scale * q # before if "prod"
+
+        # -- rescaling --
+        scale = self.scale
         if self.learn_attn_scale:
             scale = self.attn_scale_net(rearrange(x,'b h w c -> b c h w'))
             scale = rearrange(scale,'b 1 h w -> b 1 h w 1')
+            # print(scale)
+            # print(scale.shape)
+            # exit()
             # if self.detach_learn_attn:
-            #     # print("self.detach_learn_attn.")
             #     scale = scale.detach()
             q = scale * q
-        if not self.learn_attn_scale and self.dist_type == "prod":
-            q = self.scale * q
+        else:
+            if self.dist_type == "prod":
+                q = scale * q
+
+        # print(q.shape)
         attn = run_search_fxn(q, k, self.kernel_size, self.dilation, self.dist_type)
         if not self.learn_attn_scale and self.dist_type == "l2":
-            attn = self.scale * attn
+            attn = scale * attn
+
+        # exit()
+        # attn = attn.softmax(dim=-1)
+        # attn = self.attn_drop(attn)
+        # print(attn.shape)
+        # exit()
+        # attn = scale * attn
+        # if self.dist_type == "l2": attn = scale * attn # after if "l2"
         # attn = na2d_qk_with_bias(q, k, self.rpb, self.kernel_size, self.dilation)
         return attn
 
@@ -287,6 +316,7 @@ class NeighAttnAgg(nn.Module):
             kernel_size,
             dilation=1,
             v_bias=False,
+            v_layer=True,
             proj_layer=True,
             attn_drop=0.0,
             proj_drop=0.0,
@@ -306,7 +336,10 @@ class NeighAttnAgg(nn.Module):
 
         self.num_heads = num_heads
         self.head_dim = dim // self.num_heads
-        self.v = nn.Linear(dim, dim * 1, bias=v_bias)
+        if v_layer:
+            self.v = nn.Linear(dim, dim * 1, bias=v_bias)
+        else:
+            self.v = nn.Identity()
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim) if proj_layer else nn.Identity()
         self.proj_drop = nn.Dropout(proj_drop)

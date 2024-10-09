@@ -1,6 +1,6 @@
 
 import torch
-import st_spix_cuda
+import spix_paper_cuda
 
 class PairwiseDistFunction(torch.autograd.Function):
     @staticmethod
@@ -11,7 +11,7 @@ class PairwiseDistFunction(torch.autograd.Function):
         output = pixel_ftrs.new(pixel_ftrs.shape[0],
                                 9, pixel_ftrs.shape[-1]).zero_()
         self.save_for_backward(pixel_ftrs, spixel_ftrs, init_spixel_indices)
-        return st_spix_cuda.pwd_forward(
+        return spix_paper_cuda.pwd_forward(
             pixel_ftrs.contiguous(), spixel_ftrs.contiguous(),
             init_spixel_indices.contiguous(), output,
             self.num_spixels_width, self.num_spixels_height)
@@ -24,7 +24,7 @@ class PairwiseDistFunction(torch.autograd.Function):
         spixel_ftrs_grad = torch.zeros_like(spixel_ftrs)
 
         # pair_wise_distance_cuda
-        pixel_ftrs_grad, spixel_ftrs_grad = st_spix_cuda.pwd_backward(
+        pixel_ftrs_grad, spixel_ftrs_grad = spix_paper_cuda.pwd_backward(
             dist_matrix_grad.contiguous(), pixel_ftrs.contiguous(),
             spixel_ftrs.contiguous(), init_spixel_indices.contiguous(),
             pixel_ftrs_grad, spixel_ftrs_grad,

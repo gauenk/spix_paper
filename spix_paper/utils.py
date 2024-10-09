@@ -108,6 +108,32 @@ def add_grid(vid,R):
     return vid
 
 
+def rgb_to_ycbcr(image: torch.Tensor) -> torch.Tensor:
+    r"""Convert an RGB image to YCbCr.
+
+    Args:
+        image (torch.Tensor): RGB Image to be converted to YCbCr.
+
+    Returns:
+        torch.Tensor: YCbCr version of the image.
+    """
+
+    if not torch.is_tensor(image):
+        raise TypeError("Input type is not a torch.Tensor. Got {}".format(type(image)))
+
+    if len(image.shape) < 3 or image.shape[-3] != 3:
+        raise ValueError("Input size must have a shape of (*, 3, H, W). Got {}".format(image.shape))
+
+    r: torch.Tensor = image[..., 0, :, :]
+    g: torch.Tensor = image[..., 1, :, :]
+    b: torch.Tensor = image[..., 2, :, :]
+
+    y: torch.Tensor = 65.481 * r + 128.553 * g + 24.966 * b + 16.0
+    cb: torch.Tensor = -37.797 * r + -74.203 * g + 112.0 * b + 128.0
+    cr: torch.Tensor = 112.0 * r + -93.786 * g + -18.214 * b + 128.0
+
+    return torch.stack((y, cb, cr), -3)
+
 def rgb2lab(image: torch.Tensor) -> torch.Tensor:
     r"""Convert a RGB image to Lab.
 
