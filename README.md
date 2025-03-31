@@ -81,10 +81,12 @@ This image shows Soft Superpixel Neighborhood Attention (Soft-SNA) can robustly 
 If you find this work useful, please cite our paper:
 
 ```bibtex
-@inproceedings{gauen2024sna,
+@article{gauen2024soft,
   title={Soft Superpixel Neighborhood Attention},
-  author={Gauen, Kent and Chan, Stanley},
-  journal={arXiv},
+  author={Gauen, Kent W and Chan, Stanley H},
+  journal={Advances in Neural Information Processing Systems},
+  volume={37},
+  pages={116933--116959},
   year={2024}
 }
-
+```
